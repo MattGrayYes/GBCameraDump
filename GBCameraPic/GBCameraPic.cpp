@@ -1,0 +1,163 @@
+//---------------------------------------------------------------------------
+#include <vcl.h>
+#pragma hdrstop
+
+#include "GBCameraPic.h"
+#pragma package(smart_init)
+//---------------------------------------------------------------------------
+// ValidCtrCheck is used to assure that the components created do not have
+// any pure virtual functions.
+//
+
+static inline void ValidCtrCheck(TGBCameraPic *)
+{
+    new TGBCameraPic(NULL);
+}
+//---------------------------------------------------------------------------
+__fastcall TGBCameraPic::TGBCameraPic(TComponent* Owner)
+    : TImage(Owner)
+{
+
+    Height=112;
+    Width=128;
+    for (int y=0; y<131072; y++) SaveRam[y]=0;
+
+    Bitmap= new Graphics::TBitmap();
+    Bitmap->Width=32;
+    Bitmap->Height=840;
+    Bitmap->PixelFormat=pf4bit;
+
+
+    Picture= new Graphics::TBitmap();
+    Picture->PixelFormat=pf4bit;
+    Picture->Width=128;
+    Picture->Height=112;
+
+    GameFace= new Graphics::TBitmap();
+    GameFace->PixelFormat=pf4bit;
+    GameFace->Width=128;
+    GameFace->Height=112;
+
+    Clr[0]=clWhite;
+    Clr[1]=clSilver;
+    Clr[2]=clGray;
+    Clr[3]=clBlack;
+
+    FPictureNumber=1;
+
+}
+//---------------------------------------------------------------------------
+__fastcall TGBCameraPic::~TGBCameraPic(void)
+{
+    delete Picture;
+    delete Bitmap;
+    delete[] SaveRam;
+}
+//---------------------------------------------------------------------------
+namespace Gbcamerapic
+{
+    void __fastcall PACKAGE Register()
+    {
+        TComponentClass classes[1] = {__classid(TGBCameraPic)};
+        RegisterComponents("BobControls", classes, 0);
+    }
+}
+//---------------------------------------------------------------------------
+void __fastcall TGBCameraPic::LoadSaveRam(const System::AnsiString Filename)
+{
+    TFileStream *FS;
+    FS = new TFileStream(Filename, fmOpenRead);
+	FS->Read(SaveRam, 131072);
+	FS->Free();
+
+}
+//---------------------------------------------------------------------------
+void __fastcall TGBCameraPic::DrawPic(int Number)
+{
+    int count=(Number+1)* 0x1000;
+    for (int y=0;y<14;y++)
+    {
+    for (int x=0;x<16;x++)
+    {
+		for (int row=0;row<8;row++)
+		{
+ 			Byte temp1=SaveRam[count++];
+        	Byte temp2=SaveRam[count++];
+        	for (int pixel=7;pixel>=0;pixel--)
+        	{
+                Picture->Canvas->Pixels[(x*8)+pixel][(y*8)+row]=Clr[(Byte)((temp1 & 1)+((temp2 & 1)*2))];
+        		temp1>>=1;
+            	temp2>>=1;
+        	}
+    	}
+     }
+     }
+     Canvas->Draw(0,0,Picture);
+}
+//---------------------------------------------------------------------------
+void __fastcall TGBCameraPic::SetPictureNumber(int Number)
+{
+    FPictureNumber=Number;
+    DrawPic(Number);
+}
+//---------------------------------------------------------------------------
+void __fastcall TGBCameraPic::SaveCurrentPicture(const System::AnsiString Filename)
+{
+    Picture->SaveToFile(Filename);
+}
+//---------------------------------------------------------------------------
+void __fastcall TGBCameraPic::SaveGameFace(const System::AnsiString Filename)
+{
+    GameFace->SaveToFile(Filename);
+}
+//---------------------------------------------------------------------------
+Graphics::TBitmap* __fastcall TGBCameraPic::GetPreviewStrip(void)
+{
+
+
+for (int s=0;s<30;s++)
+{
+    int count=((s+2)* 0x1000)+0x0e00;
+    for (int y=0;y<4;y++)
+    {
+    for (int x=0;x<4;x++)
+    {
+		for (int row=0;row<8;row++)
+		{
+ 			Byte temp1=SaveRam[count++];
+        	Byte temp2=SaveRam[count++];
+        	for (int pixel=7;pixel>=0;pixel--)
+        	{
+                Bitmap->Canvas->Pixels[(x*8)+pixel][(y*8)+(s*28)+row]=Clr[(Byte)((temp1 & 1)+((temp2 & 1)*2))];
+        		temp1>>=1;
+            	temp2>>=1;
+        	}
+    	}
+     }
+     }
+}
+     return Bitmap;
+}
+//---------------------------------------------------------------------------
+Graphics::TBitmap* __fastcall TGBCameraPic::DrawGameFace(void)
+{
+    int count=0x11fc;
+    for (int y=0;y<14;y++)
+    {
+    for (int x=0;x<16;x++)
+    {
+		for (int row=0;row<8;row++)
+		{
+ 			Byte temp1=SaveRam[count++];
+        	Byte temp2=SaveRam[count++];
+        	for (int pixel=7;pixel>=0;pixel--)
+        	{
+                GameFace->Canvas->Pixels[(x*8)+pixel][(y*8)+row]=Clr[(Byte)((temp1 & 1)+((temp2 & 1)*2))];
+        		temp1>>=1;
+            	temp2>>=1;
+        	}
+    	}
+     }
+     }
+     return GameFace;
+}
